@@ -1,0 +1,11 @@
+Model Information:
+* title:	Worshipper - Smooth
+* source:	https://sketchfab.com/3d-models/worshipper-smooth-170b73975a5e41e39a5bb3ea1c741505
+* author:	tyhenry (https://sketchfab.com/tyhenry)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Worshipper - Smooth" (https://sketchfab.com/3d-models/worshipper-smooth-170b73975a5e41e39a5bb3ea1c741505) by tyhenry (https://sketchfab.com/tyhenry) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
