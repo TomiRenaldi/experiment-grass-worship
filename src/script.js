@@ -2,6 +2,9 @@ import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass.js'
 
 import vertexGrassShader from './shaders/grass/vertex.glsl'
 import fragmentGrassShader from './shaders/grass/fragment.glsl'
@@ -9,7 +12,6 @@ import fragmentGrassShader from './shaders/grass/fragment.glsl'
 /**
  * Base
  */
-
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
 
@@ -21,13 +23,15 @@ const scene = new THREE.Scene()
  */
 const sizes = {
     width: window.innerWidth,
-    height: window.innerHeight
+    height: window.innerHeight,
+    pixelRatio: Math.min(window.devicePixelRatio, 2)
 }
 
 window.addEventListener('resize', () => {
     // Update sizes
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
+    sizes.pixelRatio = Math.min(window.devicePixelRatio, 2)
 
     // Update camera
     camera.aspect = sizes.width / sizes.height
@@ -35,7 +39,7 @@ window.addEventListener('resize', () => {
 
     // Update renderer
     renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(sizes.pixelRatio)
 })
 
 /**
@@ -44,8 +48,8 @@ window.addEventListener('resize', () => {
 // Base camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
 camera.position.x = 0
-camera.position.y = 5
-camera.position.z = 10
+camera.position.y = 3
+camera.position.z = 25
 scene.add(camera)
 
 // Controls
@@ -53,21 +57,19 @@ const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 
 // Lights
-const light = {}
-light.directional = new THREE.DirectionalLight('#ffffff')
-light.directional.position.set(5, 5, 5)
-scene.add(light.directional)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
+directionalLight.position.set(0, 0.1, 1)
+scene.add(directionalLight)
 
 /**
  * Grass
  */
 const grass = {}
 
-grass.count = 10000
+grass.count = 50000
 grass.dummy = new THREE.Object3D()
 
-grass.geometry = new THREE.PlaneGeometry(0.01, 1, 5, 5)
-grass.geometry.translate(0, 1, 0)
+grass.geometry = new THREE.PlaneGeometry(0.01, 3, 5, 5)
 
 grass.material = new THREE.ShaderMaterial({
     uniforms: {
@@ -79,13 +81,12 @@ grass.material = new THREE.ShaderMaterial({
 })
 
 grass.mesh = new THREE.InstancedMesh(grass.geometry, grass.material, grass.count)
-grass.mesh.receiveShadow = true
 scene.add(grass.mesh)
 
 for (let i = 0; i < grass.count; i++) {
     grass.dummy.position.set(
-        (Math.random() - 0.5) * 20, 0,
-        (Math.random() - 0.5) * 20
+        (Math.random() - 0.5) * 50, 0,
+        (Math.random() - 0.5) * 50
     )
 
     grass.dummy.scale.setScalar(0.5 + Math.random() * 0.5)
@@ -104,10 +105,11 @@ const worship = {}
 worship.model = new GLTFLoader()
 worship.model.load('scene.gltf', (gltf) => {
     const statue = gltf.scene
+    statue.receiveShadow = true
     statue.castShadow = true
-    statue.position.y = 2.5
+    statue.position.y = 3.0
     statue.rotateY(Math.PI * 0.8)
-    statue.scale.set(0.3, 0.3, 0.3)
+    statue.scale.set(0.5, 0.5, 0.5)
     scene.add(statue)
 })
 
@@ -119,11 +121,30 @@ const renderer = new THREE.WebGLRenderer({
     antialias: true,
 })
 
-renderer.shadowMap.enabled = true
+renderer.autoClear = false
 renderer.outputEncoding = THREE.sRGBEncoding
-renderer.toneMapping = THREE.ReinhardToneMapping
 renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setPixelRatio(sizes.pixelRatio)
+
+// Effect composer
+const renderTarget = new THREE.WebGLMultipleRenderTargets(800, 600, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    format: THREE.RGBAFormat,
+    encoding: THREE.sRGBEncoding
+})
+
+const effectComposer = new EffectComposer(renderer)
+effectComposer.setSize(sizes.width, sizes.height)
+effectComposer.setPixelRatio(sizes.pixelRatio)
+
+// Render pass
+const renderPass = new RenderPass(scene, camera)
+effectComposer.addPass(renderPass)
+
+// Bokeh pass
+const filmPass = new FilmPass(0.35, 0.5, 2048, true)
+effectComposer.addPass(filmPass)
 
 /**
  * Animate
@@ -142,7 +163,7 @@ const tick = () => {
     controls.update()
 
     // Render
-    renderer.render(scene, camera)
+    effectComposer.render()
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
